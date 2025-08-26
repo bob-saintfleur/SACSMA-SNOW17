@@ -25,7 +25,7 @@ in_lzfpc   = 200.		!initial lzfpc in mm if not performing a restart run
 in_adimc   = 200.		!initial adimc in mm if not performing a restart run
 
 !restart flags
-write_restart = 0		!write restart files.  necessary to have to perform a restart run.
+write_restart = 1		!write restart files.  necessary to have to perform a restart run.
 restart_run = 0			!is this run a restart run? no=0 yes=1
 
 !only needed if write_restart = 1

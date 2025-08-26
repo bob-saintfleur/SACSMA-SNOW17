@@ -1,0 +1,37 @@
+  # SAC-SMA Parameters
+  # Parameter bounds via Samuel, J. et al. "Assessing model state and forecasts variation in hydrologic data assimilation" (2014)
+  # https://drive.google.com/open?id=1-Buzq6twSLYfW6ooxmGfgWMjU_Vq0S4p, Table 2
+  # Note the paper gives no range for parameters RIVA, SIDE and SAVED, not sure why. TODO try giving some range
+  PARAMETER_BOUNDS = [
+    (1., 100.),     # uztwm  Upper-zone tension water maximum storage (mm)
+    (1., 100.),     # uzfwm  Upper-zone free water maximum storage (mm)
+    (0.01, 0.99),   # uzk    Upper-zone free water lateral depletion rate (per day)
+
+    (0., 0.1),      # pctim  Impervious fraction of the watershed area (fraction)
+    (0.01, 0.1),    # adimp  Additional impervious area (fraction)
+    (0., 0.),       # riva   Riparian vegetation area (fraction I think)
+    (1., 50.),      # zperc  Maximum percolation rate (no units?)
+    (1., 50.),      # rexp   Exponent of the percolation equation
+
+    (50., 500.),    # lztwm  Lower-zone tension water maximum storage (mm)
+    (100., 1000.),  # lzfsm  Lower-zone free water supplemental maximum storage (mm)
+    (100., 2000.),  # lzfpm  Lower-zone free water primary maximum storage (mm)
+    (0.1, 0.5),     # lzsk   Lower-zone supplemental free water depletion rate (per day)
+    (0.0001, 0.02), # lzpk   Lower-zone primary free water depletion rate (per day)
+
+    (0., 0.5),      # pfree  Fraction percolating from upper- to lower-zone free water storage (fraction)
+    (0., 0.),       # side   Ratio of deep recharge to channel base flow (fraction)
+    (0., 0.)        # saved  Fraction of lower zone free water not transferable to tension water (fraction)
+  ]
+  # Start optimization with each parameter set to the middle of it's range
+  initial_params = [np.mean(bounds) for bounds in PARAMETER_BOUNDS]
+
+  # SAC-SMA State variables
+  # uztwc Upper-zone tension water storage content (mm)
+  # uzfwc Upper-zone free water storage content (mm)
+  # lztwc Lower-zone tension water storage content (mm)
+  # lzfpc Lower-zone free primary water storage content (mm)
+  # lzfsc Lower-zone free secondary water storage content (mm)
+  # adimc Additional impervious area content directly link to the stream network (mm)
+
+* tci : Totatl Channel inflow
