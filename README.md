@@ -11,10 +11,10 @@ The median output of all these seeds was used in one of the strategies tested in
 
 
 # Instructions for the runs we performed
-The argument resquired to run the SAC-SMA model in our case are outlined below:
+The argument required to run the SAC-SMA model in our case are outlined below:
 - hp: the lead time (integer)
 - period: the evaluation period. It is generally taken as the last year of the available data. But we took the 2 last years for a larger overview
-- forcing source, it could be any from maurer, daymet and nldas
+- forcing source, it could be any from *maurer*, *daymet* and *nldas*
 - n_sub :  a parameter to splut the period on the available CPU of the used machine
 - list_run: indicate which seed to use
 - path_to: path to save the climatology output
