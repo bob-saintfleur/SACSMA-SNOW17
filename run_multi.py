@@ -18,75 +18,72 @@ SENTINEL = None
 
 
 def do_work(pending_task, completed_task):
-    """ use args and function and run as task while controling the flow"""
-    # Get the current workers' name
+    """ use args and function and run as task while controlling the flow"""
     worker_name = mp.current_process().name
-    time_cum, w_c = 0., 1
-    while True:
-        try:
-            task = pending_task.get_nowait()
-        except queue.Empty:
-            time.sleep(0.01)
-        else:
-            try:
-                if task == SENTINEL:
-                    break
-                time_start = time.perf_counter()
-                work_func = pickle.loads(task["func"])
-                result = work_func(**task["task"])
-                completed_task.put({work_func.__name__: result})
-                time_end = time.perf_counter() - time_start
-                time_cum += time_end
-                w_c +=1
 
-            except Exception as e:
-                print(f"{worker_name} task failed {str(e)}")
-                completed_task.put({work_func.__name__: None})
+    while True:
+        task = pending_task.get()  # blocking, safe
+        if task is SENTINEL:
+            break
+
+        try:
+            work_func = pickle.loads(task["func"])
+            result = work_func(**task["task"])
+            completed_task.put({work_func.__name__: result})
+        except Exception as e:
+            print(f"{worker_name} task failed {e}")
+            completed_task.put({work_func.__name__: None})
 
 
 def par_proc(job_list, num_cpus=None):
-    """ Perform a parallel processing of running task using a list of task"""
-    # Get the number of cores
+    """Perform parallel processing of tasks using multiprocessing."""
     if not num_cpus:
-        # num_cpus = mp.cpu_count() - 4
         num_cpus = psutil.cpu_count(logical=False)
 
     pending_task = mp.Queue()
     completed_task = mp.Queue()
 
-    processes, results = [], []
-    # task pointer
+    # Build task list
     num_tasks = 0
     for job in job_list:
+        func_bytes = pickle.dumps(job["func"])
         for task in job["tasks"]:
-            exp_jobs = {}
+            pending_task.put({
+                "func": func_bytes,
+                "task": task
+            })
             num_tasks += 1
-            exp_jobs.update({'func': pickle.dumps(job['func'])})
-            exp_jobs.update({'task': task})
-            pending_task.put(exp_jobs)
 
-    num_workers = num_cpus
-    for c in range(num_workers):
+    # Start workers
+    processes = []
+    for i in range(num_cpus):
+        p = mp.Process(
+            target=do_work,
+            args=(pending_task, completed_task),
+            daemon=False
+        )
+        p.name = f"worker{i}"
+        p.start()
+        processes.append(p)
+
+    # Add sentinels AFTER workers start
+    for _ in range(num_cpus):
         pending_task.put(SENTINEL)
 
-    for c in range(num_workers):
-        p = mp.Process(target=do_work, args=(pending_task, completed_task), daemon=True)
-        p.name = f'worker{c}'
-        processes.append(p)
-        p.start()
-
-    completed_task_counter = 0
-    while completed_task_counter < num_tasks:
+    # Collect results
+    results = []
+    for _ in range(num_tasks):
         results.append(completed_task.get())
-        completed_task_counter += 1
 
+    # Clean shutdown
     for p in processes:
-        p.join(timeout=3)
+        p.join(timeout=1)
         if p.is_alive():
-            print(f"{p.name} still alive. Forced to terminate")
+            print(f"{p.name} did not exit cleanly. Terminating.")
             p.terminate()
-    return results
+            p.join()
 
+    return results
 
 def bind_raw_seeds_dict(dict_seed: dict):
     dict_dx = {}
@@ -104,8 +101,15 @@ def bind_raw_seeds_dict(dict_seed: dict):
 def run_parallel(func_=run, arg0=get_run_args()):
     """ Run func_ separately on dates. The dates are divided and ran separately on replicated config"""
     arg1 = arg0.copy()
+    # if arg1.get("basin", None) is None:
+    #     arg1.update({"basin": arg0["basin_list"][0]})
     list_arg = []
-    clim_default_p = str(Path(arg0["data_path"]).parent)+"climato_bm/sacsma/raw0"
+    x_mode = "climato_bm" if arg0["run_mode"].startswith("clim") else arg0["run_mode"]+"_bm"
+    x_mode = x_mode + "/sacsma"
+    if arg0["path_to"] is None:
+        path_to = str(Path(arg0["data_path"]).parent)
+    else:
+        path_to = arg0["path_to"]
     arg1.pop("sub_dates")
     arg1.update({"n_sub": 1})
     id_file = arg0["discr_model"]
@@ -117,13 +121,13 @@ def run_parallel(func_=run, arg0=get_run_args()):
     # List function and arguments pair
     list_task = [{"func": func_, "tasks": [dict(arg_run=cfgx) for cfgx in list_arg]}]
     results = par_proc(list_task)
-
+    results = [a for a in results if list(a.values())[0] is not None]
     # get, bind and save results to specified path
     bv_run = list(set([results[i]['run'][-1] for i in range(len(results))]))[0]
-    path_to = (clim_default_p if arg0["path_to"] is None else arg0["path_to"]) + f"/{bv_run.split('_')[-1]}"
-    os.makedirs(path_to, exist_ok=True)
+    path_to_ = path_to + f"/{x_mode}/{bv_run.split('_')[-1]}"
+    os.makedirs(path_to_, exist_ok=True)
     proc_seed = pd.concat([results[i]['run'][0] for i in range(len(results))]).sort_values(by="Date")
-    proc_seed.to_csv(rf"{path_to}/proc_seeds_{id_file}.csv", sep=";", index_label="Date")
+    proc_seed.to_csv(rf"{path_to_}/proc_seeds_{id_file}.csv", sep=";", index_label="Date")
 
 
 def launch_all_basins():
@@ -143,26 +147,27 @@ def launch_all_basins():
     n_bar = len(basins)* n_run
     print(f"\n *** Runs concerned by {len(basins)} basins and {n_run} cycles *** ")
 
-    with tqdm(total=n_bar) as p_bar:
-        for basin in basins:
-            inputs["basin"] = basin
-            if inputs["list_run"]:
-                list_cfg = []
-                for id_run_ in inputs["list_run"]:
-                    temp_inp = inputs.copy()
-                    temp_inp['id_run'] = id_run_
-                    temp_inp.update({"discr_model": f"{basin}_{id_run_}"})
-                    list_cfg.append(temp_inp)
-                    del temp_inp
-            else:
-                list_cfg = [inputs]
-            for inputs_ in list_cfg:
-                try:
-                    run_parallel(run, inputs_)
-                    p_bar.update(1)
-                except Exception as e:
-                    print(f"{e}. See {e.__traceback__.tb_frame}")
-                    continue
+    # with tqdm(total=n_bar) as p_bar:
+    for basin in basins:
+        print(f"\nRun on basin : {basin}")
+        inputs["basin"] = basin
+        if inputs["list_run"]:
+            list_cfg = []
+            for id_run_ in inputs["list_run"]:
+                temp_inp = inputs.copy()
+                temp_inp['id_run'] = id_run_
+                temp_inp.update({"discr_model": f"{basin}_{id_run_}"})
+                list_cfg.append(temp_inp)
+                del temp_inp
+        else:
+            list_cfg = [inputs]
+        for inputs_ in tqdm(list_cfg, desc="By Model CFG"):
+            try:
+                run_parallel(run, inputs_)
+                # p_bar.update(1)
+            except Exception as e:
+                print(f"{e}. See {e.__traceback__.tb_frame}")
+                continue
 
     # path_to = (f"../CLIMATOLOGY/sacsma" if inputs["path_to"] is None else inputs["path_to"]) + f"/hp{inputs['hp']}"
     # print(f"Results saved as {path_to}/*.csv")
