@@ -1,9 +1,12 @@
 *.pkl
 **/*.pkl
-results
+results*/
 *.csv
-venv/*
-test
+*venv/
+test*/
 job_scripts
-/*__pyc*
+*/*__pyc*
+camels*/
+.pynb*/
+.idea/
 
