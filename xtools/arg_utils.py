@@ -73,6 +73,7 @@ def get_run_args():
         """
     parser = argparse.ArgumentParser()
     parser.add_argument('--path_to', type=str, help="Path to save outputs")
+    parser.add_argument('--run_mode', choices=["climatology", "hindcast"], help="Path to save outputs")
     parser.add_argument('--data_path', type=str, help="Data folder path. Subfolders of "
                                                       "basin_mean_forcing/, usgs_streamflow/, model_output/, etc. "
                                                       "and related files are expected INN ")
@@ -83,12 +84,15 @@ def get_run_args():
     parser.add_argument('--list_run', nargs="*", help="List of pre-run seeds", metavar='05 11 .. ')
     parser.add_argument('--forcing_src', type=str, default="maurer", help="The forcing source")
     parser.add_argument('--basin_list', nargs="*", help="list of basins to run on with space-separated")
+    parser.add_argument('--basins_file', type=str, help="File for list of basins to run")
     parser.add_argument('--discr_model', type=str, help="A string to filter the model to use")
     parser.add_argument('--sample_basins', type=int, help="Basins subset, like in Kratzert et al. 2019")
     args = parser.parse_args()
 
     sub_dates = [args.period]
-    if args.sample_basins:
+    if args.basins_file is not None:
+        args.basin_list = [a.split()[0] for a in open(args.basins_file).readlines()]
+    elif args.sample_basins:
         args.basin_list = select_bv_by_class(size=args.sample_basins)
     args_ = vars(args)
     if args_["n_sub"] > 1:
@@ -96,6 +100,6 @@ def get_run_args():
     args_["sub_dates"] = sub_dates
 
     if not args_["list_run"]:
-        args_["list_run"] = ["05", "11", "27", "33", "48", "59", "66", "72", "80", "94"]
+        args_["list_run"] = ["05", "11", "27", "48", "59", "66", "72", "80", "94", "33"]
     return args_
 
