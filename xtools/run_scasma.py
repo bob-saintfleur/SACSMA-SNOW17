@@ -56,7 +56,7 @@ def run_bv_hp_period_ens(forcing_src, basin_, hp_, id_run, period_, data_path, r
         hist_ = get_hist_data(forcings, ref_)
         pred_i = {}
         i=0
-        BAR_MBR = tqdm(x_members.items(), desc=f"By-Member for Date {ref_}", leave=False)
+        BAR_MBR = tqdm(x_members.items(), desc=f"Bv-{basin_} Sd-{id_run} Date {ref_}", leave=False)
         for key_, member_ in BAR_MBR:
             BAR_MBR.set_postfix_str(f"Mbr: {key_}")
             member_.index = pred_ind
