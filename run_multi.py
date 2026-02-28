@@ -17,6 +17,41 @@ from xtools.selectbv import select_bv_by_class, read_list_of_basins
 SENTINEL = None
 
 
+import multiprocessing as mp
+from concurrent.futures import ProcessPoolExecutor
+import pickle
+
+def _pool_worker(item):
+    try:
+        func = pickle.loads(item["func"])
+        task = item["task"]
+        result = func(**task)
+        return {func.__name__: result}
+    except Exception as e:
+        return {func.__name__: None}
+
+
+def par_proc(job_list, num_cpus=None):
+    if num_cpus is None:
+        num_cpus = mp.cpu_count()
+
+    work_items = []
+    for job in job_list:
+        func_bytes = pickle.dumps(job["func"])   # <-- IMPORTANT
+        for task in job["tasks"]:
+            work_items.append({
+                "func": func_bytes,
+                "task": task
+            })
+    # with mp.Pool(processes=num_cpus) as pool:
+    #     results = pool.map(_pool_worker, work_items)
+    with ProcessPoolExecutor() as pool:
+        results = pool.map(_pool_worker, work_items)
+
+    return results
+
+
+
 def do_work(pending_task, completed_task):
     """ use args and function and run as task while controlling the flow"""
     worker_name = mp.current_process().name
@@ -35,55 +70,55 @@ def do_work(pending_task, completed_task):
             completed_task.put({work_func.__name__: None})
 
 
-def par_proc(job_list, num_cpus=None):
-    """Perform parallel processing of tasks using multiprocessing."""
-    if not num_cpus:
-        num_cpus = psutil.cpu_count(logical=False)
-
-    pending_task = mp.Queue()
-    completed_task = mp.Queue()
-
-    # Build task list
-    num_tasks = 0
-    for job in job_list:
-        func_bytes = pickle.dumps(job["func"])
-        for task in job["tasks"]:
-            pending_task.put({
-                "func": func_bytes,
-                "task": task
-            })
-            num_tasks += 1
-
-    # Start workers
-    processes = []
-    for i in range(num_cpus):
-        p = mp.Process(
-            target=do_work,
-            args=(pending_task, completed_task),
-            daemon=False
-        )
-        p.name = f"worker{i}"
-        p.start()
-        processes.append(p)
-
-    # Add sentinels AFTER workers start
-    for _ in range(num_cpus):
-        pending_task.put(SENTINEL)
-
-    # Collect results
-    results = []
-    for _ in range(num_tasks):
-        results.append(completed_task.get())
-
-    # Clean shutdown
-    for p in processes:
-        p.join(timeout=1)
-        if p.is_alive():
-            print(f"{p.name} did not exit cleanly. Terminating.")
-            p.terminate()
-            p.join()
-
-    return results
+# def par_proc(job_list, num_cpus=None):
+#     """Perform parallel processing of tasks using multiprocessing."""
+#     if not num_cpus:
+#         num_cpus = psutil.cpu_count(logical=False)
+#
+#     pending_task = mp.Queue()
+#     completed_task = mp.Queue()
+#
+#     # Build task list
+#     num_tasks = 0
+#     for job in job_list:
+#         func_bytes = pickle.dumps(job["func"])
+#         for task in job["tasks"]:
+#             pending_task.put({
+#                 "func": func_bytes,
+#                 "task": task
+#             })
+#             num_tasks += 1
+#
+#     # Start workers
+#     processes = []
+#     for i in range(num_cpus):
+#         p = mp.Process(
+#             target=do_work,
+#             args=(pending_task, completed_task),
+#             daemon=False
+#         )
+#         p.name = f"worker{i}"
+#         p.start()
+#         processes.append(p)
+#
+#     # Add sentinels AFTER workers start
+#     for _ in range(num_cpus):
+#         pending_task.put(SENTINEL)
+#
+#     # Collect results
+#     results = []
+#     for _ in range(num_tasks):
+#         results.append(completed_task.get())
+#
+#     # Clean shutdown
+#     for p in processes:
+#         p.join(timeout=1)
+#         if p.is_alive():
+#             print(f"{p.name} did not exit cleanly. Terminating.")
+#             p.terminate()
+#             p.join()
+#
+#     return results
 
 def bind_raw_seeds_dict(dict_seed: dict):
     dict_dx = {}
@@ -148,27 +183,37 @@ def launch_all_basins():
     print(f"\n *** Runs concerned by {len(basins)} basins and {n_run} cycles *** ")
 
     # with tqdm(total=n_bar) as p_bar:
+    all_bv_cfg= ()
     for basin in basins:
-        print(f"\nRun on basin : {basin}")
+        # print(f"\nRun on basin : {basin}")
         inputs["basin"] = basin
         if inputs["list_run"]:
-            list_cfg = []
+            # list_cfg = []
             for id_run_ in inputs["list_run"]:
                 temp_inp = inputs.copy()
                 temp_inp['id_run'] = id_run_
                 temp_inp.update({"discr_model": f"{basin}_{id_run_}"})
-                list_cfg.append(temp_inp)
+                # list_cfg.append(temp_inp)
+                all_bv_cfg += (temp_inp,)
                 del temp_inp
         else:
-            list_cfg = [inputs]
-        for inputs_ in tqdm(list_cfg, desc="By Model CFG"):
-            try:
-                run_parallel(run, inputs_)
-                # p_bar.update(1)
-            except Exception as e:
-                print(f"{e}. See {e.__traceback__.tb_frame}")
-                continue
-
+            # list_cfg = [inputs]
+            all_bv_cfg += (inputs,)
+        # for inputs_ in tqdm(list_cfg, desc="By Model CFG"):
+        #     try:
+        #         run_parallel(run, inputs_)
+        #         # p_bar.update(1)
+        #     except Exception as e:
+        #         print(f"{e}. See {e.__traceback__.tb_frame}")
+        #         continue
+    FULL_BV_BAR = tqdm(all_bv_cfg, desc="By-cfg")
+    for inputs_ in FULL_BV_BAR:
+        FULL_BV_BAR.set_postfix_str(f"BV : {inputs_.get('discr_model', '')}")
+        try:
+            run_parallel(run, inputs_)
+        except Exception as e:
+            print(e)
+            continue
     # path_to = (f"../CLIMATOLOGY/sacsma" if inputs["path_to"] is None else inputs["path_to"]) + f"/hp{inputs['hp']}"
     # print(f"Results saved as {path_to}/*.csv")
     print("Done!")
