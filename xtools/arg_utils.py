@@ -86,12 +86,15 @@ def get_run_args():
     parser.add_argument('--basin_list', nargs="*", help="list of basins to run on with space-separated")
     parser.add_argument('--basins_file', type=str, help="File for list of basins to run")
     parser.add_argument('--discr_model', type=str, help="A string to filter the model to use")
+    parser.add_argument('--start_bv', type=int, default=0, help="Start number bv")
     parser.add_argument('--sample_basins', type=int, help="Basins subset, like in Kratzert et al. 2019")
     args = parser.parse_args()
 
     sub_dates = [args.period]
     if args.basins_file is not None:
-        args.basin_list = [a.split()[0] for a in open(args.basins_file).readlines()]
+        l_bv = [a.split()[0] for a in open(args.basins_file).readlines()]
+        l_bv.sort()
+        args.basin_list = l_bv[args.start_bv:]
     elif args.sample_basins:
         args.basin_list = select_bv_by_class(size=args.sample_basins)
     args_ = vars(args)
