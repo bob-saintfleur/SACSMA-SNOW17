@@ -50,8 +50,6 @@ def par_proc(job_list, num_cpus=None):
 
     return results
 
-
-
 def do_work(pending_task, completed_task):
     """ use args and function and run as task while controlling the flow"""
     worker_name = mp.current_process().name
