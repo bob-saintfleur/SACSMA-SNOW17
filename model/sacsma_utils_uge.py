@@ -29,7 +29,7 @@ def rmse_obj_fun(forcings: pd.DataFrame,
     return np.sqrt(np.mean((df['sacsma_uh_qq'] - df['QObs']) ** 2))
 
 
-def run_sacsma(forcings: pd.Series,
+def run_sacsma(forcings,
                parameters: pd.Series,
                soil_file,
                latitude: float,
