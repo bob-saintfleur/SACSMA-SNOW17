@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from glob import glob
 from xtools.arg_utils import get_run_args
 from xtools.run_scasma import run
 import pandas as pd
@@ -66,12 +67,26 @@ def launch_all_basins():
             temp_inp['id_run'] = id_run_
             temp_inp.update({"discr_model": f"{basin}_{id_run_}"})
             configs += (temp_inp,)
-
+    # Filter on preruns
+    dict_path_to = {"climatology": f"climato_bm/sacsma/hp{inputs['hp']}",
+                    "hindcast": f"hindcast_bm/sacsma/hp{inputs['hp']}"}
+    run_path = Path(inputs["data_path"]).parent / dict_path_to.get(inputs["run_mode"])
+    try:
+        cfg_lst = [a for a in configs if a["discr_model"] not in \
+               [Path(b).stem.split('proc_seeds_')[1] for b in glob(str(run_path)+ f"/*{a['basin']}*.csv")]]
+    except Exception as e:
+        print(e)
+        cfg_lst = []
+    # if len(cfg_lst) != 0:
+    #     configs = cfg_lst
     # Parallelize on basin too? uncomment below
     # with ProcessPoolExecutor() as executor:
     #     tqdm(list(executor.map(_run_parallel_wrapper, configs)), total=len(configs))
-
+    if len(configs)==0:
+        print("Nothing to run")
+        return
     # No parallelization on basin
+    print(f"\n *********** RUN concerns {len(configs)} jobs for HP :{configs[0]['hp']}  *********************")
     for cfg in tqdm(configs):
         # _run_parallel_wrapper(cfg)
         run_parallel(run, cfg)
