@@ -89,7 +89,7 @@ def get_hindcast_members(hindcast_path, basin:str, period, hp:int):
                        parse_dates=["time", "Date"])
     hcst = hcst.rename(columns=RENAME_C)
     try:
-        period_ = pd.date_range(*period, freq="D")
+        period_ = pd.date_range(str(period[0]), str(period[1]), freq="D")
     except:
         period_ = period
     period_ = hcst.index.get_level_values("time").intersection(period_)
