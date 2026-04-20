@@ -77,7 +77,8 @@ def get_run_args():
     parser.add_argument('--data_path', type=str, help="Data folder path. Subfolders of "
                                                       "basin_mean_forcing/, usgs_streamflow/, model_output/, etc. "
                                                       "and related files are expected INN ")
-    parser.add_argument('--period', type=tupling_arg, help="Period to run climatology", metavar="yyyymmdd,yyyymmdd")
+    # parser.add_argument('--period', type=tupling_arg, help="Period to run climatology", metavar="yyyymmdd,yyyymmdd")
+    parser.add_argument('--period', nargs="*", help="Period to run climatology", metavar="yyyymmdd yyyymmdd")
     parser.add_argument('--n_sub', type=int, default=1, help="Split the period into n_sub parts")
     parser.add_argument('--hp', type=int, default=1, help="forecasting lead time")
     parser.add_argument('--id_run', type=str, default="05", help="seed run")
