@@ -1,0 +1,19 @@
+[project]
+name = "sacsma-vhydro-uge"
+version = "0.1.0"
+description = "Ensemble-based evaluation of the SAC-SMA (Newman et al., 2017). This version is related to the preprint (https://doi.org/10.5194/egusphere-2025-4244)."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "matplotlib",
+    "numba",
+    "numpy<2",
+    "pandas",
+    "scipy",
+    "joblib",
+    "tqdm",
+    "h5py"
+]
+authors = [
+    {name = "Bob E. SAINT-FLEUR", email = "besaintfleur@gmail.com"}
+]

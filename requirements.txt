@@ -1,0 +1,8 @@
+matplotlib
+numba
+numpy<2
+pandas
+scipy
+joblib
+tqdm
+h5py
