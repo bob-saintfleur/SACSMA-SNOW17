@@ -11,7 +11,12 @@ The used lead times range from 1 to 7 days. All the seeds (run_number 05, 11, ..
 
 
 # Instructions for the runs we performed
-First, make sure the fortran file are properly compiled in your system, by following the original README.txt instructions
+First, clone the adapted version
+```` 
+git clone https://github.com/bob-saintfleur/SACSMA-SNOW17.git -b hydro_uge
+````
+
+Mmake sure the fortran file are properly compiled in your system, by following the original README.txt instructions
 Then, make sure the modules of the requirements.txt are installed
 If you want to use UV, make sure it is installed on your system
 
