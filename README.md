@@ -69,19 +69,34 @@ parallelization. If any relaunch, only failed runs are resumed. You may also nee
 incomplete runs as the files are expected to have almost the same size. For any complete reruns, choose another saving 
 directory (--path_to new_dir) or clean the last parent directory manually.
 
-Note: You may find a basins_2.txt file to perform quick test, consider also reducing the period to couple of days ( ~30)
+Note: You may find a `basins_2.txt` file to perform quick test, consider also reducing the period to couple of days ( ~30)
 
---data_path path/to/camels_us
---basins_file path/to/basins_56
---period 19891001 19910930
+`--data_path path/to/camels_us`
+`--basins_file path/to/basins_56`
+`--period 19891001 19910930`
 
 ## Post-process your runs
 The raw outputs are stored in the directory you specified, as in following:
-- Hindcast: *path_to/hindcast_bm/sacsma/raw/hpx/*
-- Climatology : *path_to/climato_bm/sacsma/raw/hpx/*
+- Hindcast: `path_to/hindcast_bm/sacsma/raw/hp[1-7]/`
+- Climatology : `path_to/climato_bm/sacsma/raw/hp[1-7]/`
 
-Files are named as **proc_seeds_01052500_11.csv** for basin *01052500* and seed *11*
+Files are named as `proc_seeds_01052500_11.csv `for basin `01052500` and seed `11`
 
-These outputs need to be reformatted from one-file-per-basin-per-seed-per-hp to ONE multi index dataframe. 
-This multi-index should be (context, basin, hp, year, seed, Date) and the column will be (prediction).
-Save it in a FILE.parquet.gzip for faster processing.
+These outputs need to be reformatted from one-file-per-basin-per-seed-per-hp to:
+ - 1. A Date indexed one-file-per-basin-per-hp with mean on seed. Save in `data/hindcast_bm/sacsma/hp[1-7]/basin.csv`, 
+   or `data/climato_bm/sacsma/hp[1-7]/basin.csv`.
+ - 2. A multi index dataframe with One-file-per-hp for all basin, where multi-index should be `(context, basin, hp, year, seed, Date)` and the column will be `(prediction)`.
+  Save it in a `FILE.parquet.gzip` for faster processing, with:
+   - context="sacsma"
+   - basin: 8-digit string ID of basin
+   - hp: integer of lead time
+   - seed: integer of the number of the seed from 1 to 10 in the ensemble cases, and -1 in the case of the deterministic case
+   - Date: yyyy-mm-dd date format
+   - FILE: 
+     - climatology : `sacsma_hp[1-7]_CLIM56.parquet.gzip`
+     - hindcast: `sacsma_hp[1-7]_HIND56.parquet.gzip`
+     - perfect or deterministic: `sacsma_hp[1-7]_PERF531.parquet.gzip`
+   - save like in : `~/data_paper/processed/us/FILE.parquet.gzip `
+
+
+[Note] The MLP runs use the `hindcast_bm/scasma/hp[1-7]/basin.csv` to perform the DA2 and the DA3 strategies
