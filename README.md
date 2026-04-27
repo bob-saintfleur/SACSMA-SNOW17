@@ -63,6 +63,12 @@ python run_multi.py --hp 2 --run_mode hindcast --period 19901001 19901030 --forc
 python run_multi.py --hp 2 --run_mode climatology --period 19901001 19901030 --forcing_src maurer --n_sub 3 --data_path data\camels_us --basins_file data\basins_56 --path_to theere
 ````
 
+##### Hindcast run
+```
+python run_multi.py --hp 2 --run_mode hindcast --period 19901001 19901030 --forcing_src maurer --n_sub 3 --data_path Y:\repo_egu24\data_paper\data\camelsus\camels_us --basins_file Y:\repo_egu24\data_paper\data\camelsus\basins_2.txt --path_to theere
+```
+
+
 # Run as in this Paper
 you will need to iterate of the lead time list *\[1..7]*. You may also need to relaunch as some crashs may occur during 
 parallelization. If any relaunch, only failed runs are resumed. You may also need to clean the directory by removing 
